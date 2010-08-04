@@ -384,7 +384,7 @@ class TVDBAgent(Agent.TV_Shows):
     
     # Copy attributes from the XML element to the metadata object
     metadata.name = el_text(series_el, 'SeriesName')
-    metadata.description = el_text(series_el, 'Overview')
+    metadata.summary = el_text(series_el, 'Overview')
     metadata.content_rating = el_text(series_el, 'ContentRating')
     metadata.studio = el_text(series_el, 'Network')
     try: 
@@ -420,7 +420,7 @@ class TVDBAgent(Agent.TV_Shows):
 
           # Copy attributes from the XML
           episode.title = el_text(episode_el, 'EpisodeName')
-          episode.description = el_text(episode_el, 'Overview')
+          episode.summary = el_text(episode_el, 'Overview')
           
           try: episode.absolute_number = int(el_text(episode_el, 'absolute_number'))
           except: pass
