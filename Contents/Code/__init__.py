@@ -411,6 +411,10 @@ class TVDBAgent(Agent.TV_Shows):
         season_num = el_text(episode_el, 'SeasonNumber')
         episode_num = el_text(episode_el, 'EpisodeNumber')
         
+        if not (season_num in media.seasons and episode_num in media.seasons[season_num].episodes):
+          Log("No media for season %s episode %s - skipping population of episode data", season_num, episode_num)
+          continue
+          
         # Get the episode object from the model
         episode = metadata.seasons[season_num].episodes[episode_num]
         
@@ -500,14 +504,19 @@ class TVDBAgent(Agent.TV_Shows):
           elif banner_type == 'season':
             banner_type_2 = el_text(banner_el, 'BannerType2')
             season_num = el_text(banner_el, 'Season')
-          
-            if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
-              try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data, sort_order=i)
-              except: pass
+            
+            if season_num in media.seasons:
+              if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
+                try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data, sort_order=i)
+                except: pass
 
-            elif banner_type_2 == 'seasonwide' and banner_name not in metadata.seasons[season_num].banners:
-              try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data, sort_order=i)
-              except: pass
+              elif banner_type_2 == 'seasonwide' and banner_name not in metadata.seasons[season_num].banners:
+                try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data, sort_order=i)
+                except: pass
+            
+            else:
+              Log('No media for season %s - skipping download of %s', season_num, banner_name)
+              
               
   def util_cleanShow(self, cleanShow, scrubList):
     for word in scrubList:
@@ -522,4 +531,3 @@ class TVDBAgent(Agent.TV_Shows):
       if l >= 0:
         cleanShow = cleanShow[:l] + cleanShow[l+len(c)+1:]
     return cleanShow
-      
