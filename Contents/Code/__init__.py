@@ -359,7 +359,7 @@ class TVDBAgent(Agent.TV_Shows):
     except:
       pass
 
-  def update(self, metadata, lang):
+  def update(self, metadata, media, lang):
     zip_url = TVDB_ZIP_URL % (Dict['ZIP_MIRROR'], metadata.id, lang)
     banner_root = TVDB_BANNER_URL % Dict['IMG_MIRROR']
     
