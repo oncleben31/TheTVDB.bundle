@@ -394,9 +394,9 @@ class TVDBAgent(Agent.TV_Shows):
       else:
         metadata.originally_available_at = None
     except: pass
-    try: metadata.runtime = int(el_text(series_el, 'Runtime')) * 60 * 1000
+    try: metadata.duration = int(el_text(series_el, 'Runtime')) * 60 * 1000
     except: pass
-    try: metadata.community_rating = float(el_text(series_el, 'Rating'))
+    try: metadata.rating = float(el_text(series_el, 'Rating'))
     except: pass
     
     self.readTags(series_el, metadata.genres, 'Genre')
@@ -426,7 +426,7 @@ class TVDBAgent(Agent.TV_Shows):
           except: pass
       
           rating = el_text(episode_el, 'Rating')
-          if rating != None and len(rating) > 0: episode.community_rating = float(rating)
+          if rating != None and len(rating) > 0: episode.rating = float(rating)
           
           try:    
             first_aired = el_text(episode_el, 'FirstAired')
