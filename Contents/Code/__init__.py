@@ -383,7 +383,7 @@ class TVDBAgent(Agent.TV_Shows):
     parse_date = lambda s: Datetime.ParseDate(s).date()
     
     # Copy attributes from the XML element to the metadata object
-    metadata.name = el_text(series_el, 'SeriesName')
+    metadata.title = el_text(series_el, 'SeriesName')
     metadata.summary = el_text(series_el, 'Overview')
     metadata.content_rating = el_text(series_el, 'ContentRating')
     metadata.studio = el_text(series_el, 'Network')
