@@ -388,9 +388,9 @@ class TVDBAgent(Agent.TV_Shows):
     metadata.content_rating = el_text(series_el, 'ContentRating')
     metadata.studio = el_text(series_el, 'Network')
     try: 
-      first_aired = el_text(series_el, 'FirstAired')
-      if len(first_aired) > 0:
-        metadata.originally_available_at = parse_date(first_aired)
+      originally_available_at = el_text(series_el, 'FirstAired')
+      if len(originally_available_at) > 0:
+        metadata.originally_available_at = parse_date(originally_available_at)
       else:
         metadata.originally_available_at = None
     except: pass
@@ -429,9 +429,9 @@ class TVDBAgent(Agent.TV_Shows):
           if rating != None and len(rating) > 0: episode.rating = float(rating)
           
           try:    
-            first_aired = el_text(episode_el, 'FirstAired')
-            if first_aired != None and len(first_aired) > 0: 
-              episode.originally_available_at = parse_date(first_aired)
+            originally_available_at = el_text(episode_el, 'FirstAired')
+            if originally_available_at != None and len(originally_available_at) > 0: 
+              episode.originally_available_at = parse_date(originally_available_at)
           except:
             pass  
           
