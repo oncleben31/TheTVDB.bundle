@@ -180,7 +180,7 @@ class TVDBAgent(Agent.TV_Shows):
     for k in NETWORK_IN_TITLE:
       if k.lower() in w:
         networks = networks + k + '+'
-    searchForTitle =  self.util_cleanShow(media.show, SCRUB_FROM_TITLE_SEARCH_KEYWORDS + NETWORK_IN_TITLE)
+    searchForTitle =  self.util_cleanShow(media.show, SCRUB_FROM_TITLE_SEARCH_KEYWORDS + NETWORK_IN_TITLE).strip()
     ADVscore = 99
     year= ''
     if year:
