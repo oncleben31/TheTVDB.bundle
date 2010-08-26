@@ -411,8 +411,17 @@ class TVDBAgent(Agent.TV_Shows):
         season_num = el_text(episode_el, 'SeasonNumber')
         episode_num = el_text(episode_el, 'EpisodeNumber')
         
-        if not (season_num in media.seasons and episode_num in media.seasons[season_num].episodes):
-          Log("No media for season %s episode %s - skipping population of episode data", season_num, episode_num)
+        # Also get the air date for date-based episodes.
+        try: 
+          originally_available_at = parse_date(el_text(episode_el, 'FirstAired'))
+          date_based_season = originally_available_at.year
+        except: 
+          originally_available_at = date_based_season = None
+          
+        if not ((season_num in media.seasons and episode_num in media.seasons[season_num].episodes) or 
+                (originally_available_at is not None and date_based_season in media.seasons and originally_available_at in media.seasons[date_based_season].episodes) or 
+                (originally_available_at is not None and season_num in media.seasons and originally_available_at in media.seasons[season_num].episodes)):
+          #Log("No media for season %s episode %s - skipping population of episode data", season_num, episode_num)
           continue
           
         # Get the episode object from the model
@@ -505,7 +514,10 @@ class TVDBAgent(Agent.TV_Shows):
             banner_type_2 = el_text(banner_el, 'BannerType2')
             season_num = el_text(banner_el, 'Season')
             
-            if season_num in media.seasons:
+            # Need to check for date-based season (year) as well.
+            date_based_season = (int(season_num) + metadata.originally_available_at.year - 1)
+            
+            if season_num in media.seasons or date_based_season in media.seasons:
               if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
                 try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data, sort_order=i)
                 except: pass
@@ -515,7 +527,8 @@ class TVDBAgent(Agent.TV_Shows):
                 except: pass
             
             else:
-              Log('No media for season %s - skipping download of %s', season_num, banner_name)
+              #Log('No media for season %s - skipping download of %s', season_num, banner_name)
+              pass
               
               
   def util_cleanShow(self, cleanShow, scrubList):
