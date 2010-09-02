@@ -61,6 +61,9 @@ class TVDBAgent(Agent.TV_Shows):
   
   def search(self, results, media, lang):
     
+    # FAST FAIL for now.
+    return
+    
     # MAKE SURE WE USE precomposed form, since that seems to be what TVDB prefers.
     media.show = unicodedata.normalize('NFC', unicode(media.show))
     
