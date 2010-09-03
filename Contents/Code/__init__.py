@@ -1,11 +1,14 @@
 import re, unicodedata
 
+TVDB_SITE  = 'thetvdb.com'
+TVDB_PROXY = 'thetvdb.plexapp.com:27639'
+
 TVDB_API_KEY    = 'D4DDDAEFAD083E6F'
-TVDB_MIRROR_URL = 'http://thetvdb.com/api/%s/mirrors.xml' % TVDB_API_KEY
-TVDB_SEARCH_URL = 'http://thetvdb.com/api/GetSeries.php?seriesname=%s&language=%s'
-TVDB_ADVSEARCH_TVCOM  = 'http://thetvdb.com/index.php?seriesname=&fieldlocation=2&genre=&year=&network=&zap2it_id=&tvcom_id=%s&imdb_id=&order=translation&searching=Search&tab=advancedsearch&language=%s'
-TVDB_ADVSEARCH_IMDB  = 'http://thetvdb.com/index.php?seriesname=&fieldlocation=2&genre=&year=&network=&zap2it_id=&tvcom_id=&imdb_id=%s&order=translation&searching=Search&tab=advancedsearch&language=%s'
-TVDB_ADVSEARCH_NETWORK  = 'http://thetvdb.com/index.php?seriesname=%s&fieldlocation=1&genre=&year=%s&network=%s&zap2it_id=&tvcom_id=&imdb_id=&order=translation&searching=Search&tab=advancedsearch&language=%s'
+TVDB_MIRROR_URL = 'http://%s/api/%s/mirrors.xml' % (TVDB_PROXY, TVDB_API_KEY)
+TVDB_SEARCH_URL = 'http://%s/api/GetSeries.php?seriesname=%%s&language=%%s' % TVDB_PROXY 
+TVDB_ADVSEARCH_TVCOM  = 'http://%s/index.php?seriesname=&fieldlocation=2&genre=&year=&network=&zap2it_id=&tvcom_id=%%s&imdb_id=&order=translation&searching=Search&tab=advancedsearch&language=%%s' % TVDB_PROXY
+TVDB_ADVSEARCH_IMDB  = 'http://%s/index.php?seriesname=&fieldlocation=2&genre=&year=&network=&zap2it_id=&tvcom_id=&imdb_id=%%s&order=translation&searching=Search&tab=advancedsearch&language=%%s' % TVDB_PROXY
+TVDB_ADVSEARCH_NETWORK  = 'http://%s/index.php?seriesname=%%s&fieldlocation=1&genre=&year=%%s&network=%%s&zap2it_id=&tvcom_id=&imdb_id=&order=translation&searching=Search&tab=advancedsearch&language=%%s' % TVDB_PROXY
 
 TVDB_SERIES_URL = '%%s/api/%s/series/%%s' % TVDB_API_KEY
 TVDB_ZIP_URL    = '%s/all/%%s.zip' % TVDB_SERIES_URL
@@ -28,30 +31,70 @@ SCRUB_FROM_TITLE_SEARCH_KEYWORDS = ['uk','us']
 NETWORK_IN_TITLE = ['bbc']
 EXTRACT_AS_KEYWORDS = ['uk','us','bbc']
 
-def Start():
-  """
-    Fetch the list of mirrors from TheTVDB and pick a zip and image mirror at random.
-  """
-  mirrors_el = XML.ElementFromURL(TVDB_MIRROR_URL, cacheTime = CACHE_1MONTH)
+netLock = Thread.Lock()
+
+# Keep track of success/failures in a row.
+successCount = 0
+failureCount = 0
+
+RETRY_TIMEOUT = 1
+TOTAL_TRIES   = 10
+BACKUP_TRIES  = 1
+
+def GetResultFromNetwork(url, fetchContent=True):
+  global successCount, failureCount, RETRY_TIMEOUT
   
-  zip_mirrors = []
-  img_mirrors = []
-  
-  # Compare the type mask of each mirror to check what type of data it provides
-  for mirror in mirrors_el.xpath('Mirror'):
-    try:
-      typemask = int(mirror.xpath('typemask')[0].text)
-      path = mirror.xpath('mirrorpath')[0].text
-      if typemask & 4:
-        zip_mirrors.append(path)
-      if typemask & 2:
-        img_mirrors.append(path)
-    except:
-      print Plugin.Traceback()
+  try:
+    netLock.acquire()
+    print "Retrieving URL:", url
+
+    tries = TOTAL_TRIES
+    while tries > 0:
+
+      try:
+        result = HTTP.Request(url)
+        if fetchContent:
+          result = result.content
+        
+        failureCount = 0
+        successCount += 1
+        print "Success (%d in a row)" % successCount
+          
+        if successCount > 20:
+          RETRY_TIMEOUT = max(1, RETRY_TIMEOUT/2)
+          print "Lowering retry timeout to %d seconds" % RETRY_TIMEOUT
+          successCount = 0
+        
+        # DONE!
+        return result
+        
+      except:
+        raise
+        failureCount += 1
+        print "Failure (%d in a row)" % failureCount
+        successCount = 0
+        time.sleep(RETRY_TIMEOUT)
       
-  Dict['ZIP_MIRROR'] = Util.RandomItemFromList(zip_mirrors)
-  Dict['IMG_MIRROR'] = Util.RandomItemFromList(img_mirrors)
+        if failureCount > 5:
+          print "Increasing retry timeout to %d seconds" % RETRY_TIMEOUT
+          RETRY_TIMEOUT *= 2
+          failureCount += 1
+          
+      # On the last tries, attempt to contact the original URL.
+      tries -= 1
+      if tries == BACKUP_TRIES and url != backup_url:
+        print "Falling back to non-proxied URL"
+        url = url.replace(TVDB_PROXY, TVDB_SITE)
   
+  finally:
+    netLock.release()
+    
+  return None
+    
+def Start():
+  
+  Dict['ZIP_MIRROR'] = 'http://' + TVDB_PROXY
+  Dict['IMG_MIRROR'] = 'http://' + TVDB_PROXY
   HTTP.CacheTime = CACHE_1DAY
   
 class TVDBAgent(Agent.TV_Shows):
@@ -60,9 +103,6 @@ class TVDBAgent(Agent.TV_Shows):
   languages = [Locale.Language.English]
   
   def search(self, results, media, lang):
-    
-    # FAST FAIL for now.
-    return
     
     # MAKE SURE WE USE precomposed form, since that seems to be what TVDB prefers.
     media.show = unicodedata.normalize('NFC', unicode(media.show))
@@ -137,7 +177,7 @@ class TVDBAgent(Agent.TV_Shows):
                   if TVurl[-3] == 'show':
                     tvID = TVurl[-2]  
                     try:
-                      url = HTML.ElementFromURL(TVDB_ADVSEARCH_TVCOM % (tvID, lang)).xpath('//table[@id="listtable"]//tr[2]//a')[0].get('href')
+                      url = HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_TVCOM % (tvID, lang))).xpath('//table[@id="listtable"]//tr[2]//a')[0].get('href')
                       scorePenalty = -5
                     except:
                       return
@@ -168,7 +208,7 @@ class TVDBAgent(Agent.TV_Shows):
       
     #try an exact tvdb match    
     try:
-      el = XML.ElementFromURL(TVDB_SEARCH_URL % (mediaShowYear, lang)).xpath('.//Series')[0]
+      el = XML.ElementFromString(GetResultFromNetwork(TVDB_SEARCH_URL % (mediaShowYear, lang))).xpath('.//Series')[0]
       series_name = el.xpath('SeriesName')[0].text
       if series_name.lower() == media.show.lower():
         id = el.xpath('id')[0].text
@@ -189,7 +229,7 @@ class TVDBAgent(Agent.TV_Shows):
     if year:
       year = str(media.year)
     try:
-      for el in  HTML.ElementFromURL(TVDB_ADVSEARCH_NETWORK % (searchForTitle, year, networks[:-1], lang)).xpath('//table[@id="listtable"]//tr')[1:10]:
+      for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (searchForTitle, year, networks[:-1], lang))).xpath('//table[@id="listtable"]//tr')[1:10]:
         url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
         self.TVDBurlParse(media, lang, results, ADVscore, 0, url)
         ADVscore = ADVscore - 1
@@ -214,7 +254,7 @@ class TVDBAgent(Agent.TV_Shows):
           if lang == 'en':
             tvdbLang = '7'
           try:
-            for el in  HTML.ElementFromURL(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang)).xpath('//table[@id="listtable"]//tr')[1:3]:
+            for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang))).xpath('//table[@id="listtable"]//tr')[1:3]:
               url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
               self.TVDBurlParse(media, lang, results, ADVscore, 0, url)
               ADVscore = ADVscore - 5
@@ -273,10 +313,11 @@ class TVDBAgent(Agent.TV_Shows):
     if m:
       id = m.groups(1)[0]
       try:
-        xml = XML.ElementFromURL(TVDB_SERIES_URL % (Dict['ZIP_MIRROR'], id, lang))
+        xml = XML.ElementFromString(GetResultFromNetwork(TVDB_SERIES_URL % (Dict['ZIP_MIRROR'], id, lang)))
         if len(xml):
           self.ParseSeries(media, xml.xpath('//Series')[0], lang, results, score - scorePenalty)
       except:
+        raise
         #somehow the tvdb id didn't work?
         Log('thetvdb.com series xml download exception.')
       
@@ -367,7 +408,7 @@ class TVDBAgent(Agent.TV_Shows):
     banner_root = TVDB_BANNER_URL % Dict['IMG_MIRROR']
     
     # Get the show's zipped data
-    zip_data = HTTP.Request(zip_url)
+    zip_data = GetResultFromNetwork(zip_url)
     zip_archive = Archive.Zip(zip_data)
     
     # Extract the XML files from the archive
@@ -459,7 +500,7 @@ class TVDBAgent(Agent.TV_Shows):
             thumb_file = el_text(episode_el, 'filename')
             if thumb_file != None and len(thumb_file) > 0:
               thumb_url = banner_root + thumb_file
-              thumb_data = HTTP.Request(thumb_url)
+              thumb_data = GetResultFromNetwork(thumb_url, False)
               
               # Check that the thumb doesn't already exist before downloading it
               if thumb_url not in episode.thumbs:
@@ -496,7 +537,7 @@ class TVDBAgent(Agent.TV_Shows):
             
           # Compute the banner name and prepare the data
           banner_name = banner_root + banner_path
-          banner_data = HTTP.Request(banner_root + banner_thumb)
+          banner_data = GetResultFromNetwork(banner_root + banner_thumb, False)
         
           # Find the attribute to add to based on the image type, checking that data doesn't
           # already exist before downloading
