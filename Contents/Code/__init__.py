@@ -41,6 +41,8 @@ RETRY_TIMEOUT = 1
 TOTAL_TRIES   = 10
 BACKUP_TRIES  = 1
 
+headers = {'User-Agent': 'Plex/Nine'}
+
 def GetResultFromNetwork(url, fetchContent=True):
   global successCount, failureCount, RETRY_TIMEOUT
   
@@ -52,7 +54,7 @@ def GetResultFromNetwork(url, fetchContent=True):
     while tries > 0:
 
       try:
-        result = HTTP.Request(url)
+        result = HTTP.Request(url, headers=headers)
         if fetchContent:
           result = result.content
         
@@ -69,7 +71,6 @@ def GetResultFromNetwork(url, fetchContent=True):
         return result
         
       except:
-        raise
         failureCount += 1
         print "Failure (%d in a row)" % failureCount
         successCount = 0
@@ -536,7 +537,7 @@ class TVDBAgent(Agent.TV_Shows):
             return
             
           # Compute the banner name and prepare the data
-          banner_name = banner_root + banner_path]
+          banner_name = banner_root + banner_path
           def banner_data():
             return GetResultFromNetwork(banner_root + banner_thumb, False)
         
