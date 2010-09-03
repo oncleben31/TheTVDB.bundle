@@ -536,22 +536,23 @@ class TVDBAgent(Agent.TV_Shows):
             return
             
           # Compute the banner name and prepare the data
-          banner_name = banner_root + banner_path
-          banner_data = GetResultFromNetwork(banner_root + banner_thumb, False)
+          banner_name = banner_root + banner_path]
+          def banner_data():
+            return GetResultFromNetwork(banner_root + banner_thumb, False)
         
           # Find the attribute to add to based on the image type, checking that data doesn't
           # already exist before downloading
           if banner_type == 'fanart' and banner_name not in metadata.art:
-            try: metadata.art[banner_name] = proxy(banner_data, sort_order=i)
+            try: metadata.art[banner_name] = proxy(banner_data(), sort_order=i)
             except: pass
 
           elif banner_type == 'poster' and banner_name not in metadata.posters:
-            try: metadata.posters[banner_name] = proxy(banner_data, sort_order=i)
+            try: metadata.posters[banner_name] = proxy(banner_data(), sort_order=i)
             except: pass
 
           elif banner_type == 'series':
             if banner_name not in metadata.banners:
-              try: metadata.banners[banner_name] = proxy(banner_data, sort_order=i)
+              try: metadata.banners[banner_name] = proxy(banner_data(), sort_order=i)
               except: pass
 
           elif banner_type == 'season':
@@ -563,11 +564,11 @@ class TVDBAgent(Agent.TV_Shows):
             
             if season_num in media.seasons or date_based_season in media.seasons:
               if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
-                try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data, sort_order=i)
+                try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data(), sort_order=i)
                 except: pass
 
               elif banner_type_2 == 'seasonwide' and banner_name not in metadata.seasons[season_num].banners:
-                try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data, sort_order=i)
+                try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data(), sort_order=i)
                 except: pass
             
             else:
