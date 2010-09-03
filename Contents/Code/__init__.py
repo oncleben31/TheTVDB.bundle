@@ -41,7 +41,7 @@ RETRY_TIMEOUT = 1
 TOTAL_TRIES   = 10
 BACKUP_TRIES  = 1
 
-headers = {'User-Agent': 'Plex/Nine'}
+headers = {'User-agent': 'Plex/Nine'}
 
 def GetResultFromNetwork(url, fetchContent=True):
   global successCount, failureCount, RETRY_TIMEOUT
