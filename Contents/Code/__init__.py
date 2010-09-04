@@ -1,7 +1,10 @@
-import re, unicodedata
+import re, time, unicodedata
 
 TVDB_SITE  = 'thetvdb.com'
 TVDB_PROXY = 'thetvdb.plexapp.com:27639'
+
+TVRAGE_SERVICES_SITE = 'services.tvrage.com'
+TVRAGE_SITE = 'tvrage.com'
 
 TVDB_API_KEY    = 'D4DDDAEFAD083E6F'
 TVDB_MIRROR_URL = 'http://%s/api/%s/mirrors.xml' % (TVDB_PROXY, TVDB_API_KEY)
@@ -77,15 +80,15 @@ def GetResultFromNetwork(url, fetchContent=True):
         time.sleep(RETRY_TIMEOUT)
       
         if failureCount > 5:
+          RETRY_TIMEOUT = min(10, RETRY_TIMEOUT * 1.5)
           print "Increasing retry timeout to %d seconds" % RETRY_TIMEOUT
-          RETRY_TIMEOUT *= 2
-          failureCount += 1
+          failureCount = 0
           
       # On the last tries, attempt to contact the original URL.
-      tries -= 1
-      if tries == BACKUP_TRIES and url != backup_url:
-        print "Falling back to non-proxied URL"
+      tries = tries - 1
+      if tries == BACKUP_TRIES:
         url = url.replace(TVDB_PROXY, TVDB_SITE)
+        print "Falling back to non-proxied URL", url
   
   finally:
     netLock.release()
