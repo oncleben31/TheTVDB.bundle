@@ -3,8 +3,8 @@ import re, time, unicodedata
 TVDB_SITE  = 'thetvdb.com'
 TVDB_PROXY = 'thetvdb.plexapp.com:27639'
 
-TVRAGE_SERVICES_SITE = 'services.tvrage.com'
 TVRAGE_SITE = 'tvrage.com'
+TVRAGE_PROXY = 'tvrage.plexapp.com:27640'
 
 TVDB_API_KEY    = 'D4DDDAEFAD083E6F'
 TVDB_MIRROR_URL = 'http://%s/api/%s/mirrors.xml' % (TVDB_PROXY, TVDB_API_KEY)
@@ -28,7 +28,7 @@ BING_JSON_TVDB = 'http://api.bing.net/json.aspx?AppId=879000C53DA17EA8DB4CD1B103
 BING_JSON_TVDB_TITLE = 'http://api.bing.net/json.aspx?AppId=879000C53DA17EA8DB4CD1B103C00243FD0EFEE8&Version=2.2&Query=%s+intitle:"series+info"+site:thetvdb.com+%s&Sources=web&Web.Count=8&JsonType=raw'
 BING_JSON_TVCOM ='http://api.bing.net/json.aspx?AppId=879000C53DA17EA8DB4CD1B103C00243FD0EFEE8&Version=2.2&Query=%s+site:tv.com+%s&Sources=web&Web.Count=8&JsonType=raw'
 
-TVRAGE_SEARCH   = 'http://services.tvrage.com/feeds/search.php?show=%s' 
+TVRAGE_SEARCH   = 'http://%s/feeds/search.php?show=%%s' % TVRAGE_PROXY
 
 SCRUB_FROM_TITLE_SEARCH_KEYWORDS = ['uk','us']
 NETWORK_IN_TITLE = ['bbc']
@@ -41,7 +41,7 @@ successCount = 0
 failureCount = 0
 
 RETRY_TIMEOUT = 1
-TOTAL_TRIES   = 10
+TOTAL_TRIES   = 5
 BACKUP_TRIES  = 1
 
 headers = {'User-agent': 'Plex/Nine'}
@@ -51,7 +51,7 @@ def GetResultFromNetwork(url, fetchContent=True):
   
   try:
     netLock.acquire()
-    print "Retrieving URL:", url
+    Log("Retrieving URL: " + url)
 
     tries = TOTAL_TRIES
     while tries > 0:
@@ -63,11 +63,9 @@ def GetResultFromNetwork(url, fetchContent=True):
         
         failureCount = 0
         successCount += 1
-        print "Success (%d in a row)" % successCount
           
         if successCount > 20:
           RETRY_TIMEOUT = max(1, RETRY_TIMEOUT/2)
-          print "Lowering retry timeout to %d seconds" % RETRY_TIMEOUT
           successCount = 0
         
         # DONE!
@@ -75,20 +73,19 @@ def GetResultFromNetwork(url, fetchContent=True):
         
       except:
         failureCount += 1
-        print "Failure (%d in a row)" % failureCount
+        Log("Failure (%d in a row)" % failureCount)
         successCount = 0
         time.sleep(RETRY_TIMEOUT)
       
         if failureCount > 5:
           RETRY_TIMEOUT = min(10, RETRY_TIMEOUT * 1.5)
-          print "Increasing retry timeout to %d seconds" % RETRY_TIMEOUT
           failureCount = 0
           
       # On the last tries, attempt to contact the original URL.
       tries = tries - 1
       if tries == BACKUP_TRIES:
         url = url.replace(TVDB_PROXY, TVDB_SITE)
-        print "Falling back to non-proxied URL", url
+        Log("Falling back to non-proxied URL: " + url)
   
   finally:
     netLock.release()
@@ -243,11 +240,11 @@ class TVDBAgent(Agent.TV_Shows):
     #run through tvRage -> tvdb name matches. the challenge with this is that it can only help a little...there is no tvrage->thetvdb lookup today.
     score = 100
     try:
-      for r in XML.ElementFromURL(TVRAGE_SEARCH % mediaShowYear).xpath('//show')[:4]:
+      for r in XML.ElementFromString(GetResultFromNetwork(TVRAGE_SEARCH % mediaShowYear)).xpath('//show')[:4]:
         score = score - 3
         tvrageName = r.xpath('name')[0].text
         tvrageLink = r.xpath('link')[0].text
-        network = HTML.ElementFromURL(tvrageLink).xpath('//a[contains(@href,"/networks")]')[0].text_content()
+        network = HTML.ElementFromString(GetResultFromNetwork(tvrageLink.replace('www.tvrage.com', TVRAGE_PROXY))).xpath('//a[contains(@href,"/networks")]')[0].text_content()
         #Log("****************" + network  )
         try:
           ADVscore = 100
@@ -321,7 +318,6 @@ class TVDBAgent(Agent.TV_Shows):
         if len(xml):
           self.ParseSeries(media, xml.xpath('//Series')[0], lang, results, score - scorePenalty)
       except:
-        raise
         #somehow the tvdb id didn't work?
         Log('thetvdb.com series xml download exception.')
       
@@ -564,7 +560,10 @@ class TVDBAgent(Agent.TV_Shows):
             season_num = el_text(banner_el, 'Season')
             
             # Need to check for date-based season (year) as well.
-            date_based_season = (int(season_num) + metadata.originally_available_at.year - 1)
+            try:
+              date_based_season = (int(season_num) + metadata.originally_available_at.year - 1)
+            except:
+              date_based_season = None
             
             if season_num in media.seasons or date_based_season in media.seasons:
               if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
