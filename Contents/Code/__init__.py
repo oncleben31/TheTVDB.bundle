@@ -42,8 +42,9 @@ netLock = Thread.Lock()
 successCount = 0
 failureCount = 0
 
-RETRY_TIMEOUT = 1
-TOTAL_TRIES   = 5
+MIN_RETRY_TIMEOUT = 2
+RETRY_TIMEOUT = MIN_RETRY_TIMEOUT
+TOTAL_TRIES   = 3
 BACKUP_TRIES  = 1
 
 headers = {'User-agent': 'Plex/Nine'}
@@ -67,7 +68,7 @@ def GetResultFromNetwork(url, fetchContent=True):
         successCount += 1
           
         if successCount > 20:
-          RETRY_TIMEOUT = max(1, RETRY_TIMEOUT/2)
+          RETRY_TIMEOUT = max(MIN_RETRY_TIMEOUT, RETRY_TIMEOUT/2)
           successCount = 0
         
         # DONE!
