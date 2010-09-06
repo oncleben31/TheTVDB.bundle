@@ -455,18 +455,19 @@ class TVDBAgent(Agent.TV_Shows):
         season_num = el_text(episode_el, 'SeasonNumber')
         episode_num = el_text(episode_el, 'EpisodeNumber')
         
-        # Also get the air date for date-based episodes.
-        try: 
-          originally_available_at = parse_date(el_text(episode_el, 'FirstAired'))
-          date_based_season = originally_available_at.year
-        except: 
-          originally_available_at = date_based_season = None
+        if media is not None:
+          # Also get the air date for date-based episodes.
+          try: 
+            originally_available_at = parse_date(el_text(episode_el, 'FirstAired'))
+            date_based_season = originally_available_at.year
+          except: 
+            originally_available_at = date_based_season = None
           
-        if not ((season_num in media.seasons and episode_num in media.seasons[season_num].episodes) or 
-                (originally_available_at is not None and date_based_season in media.seasons and originally_available_at in media.seasons[date_based_season].episodes) or 
-                (originally_available_at is not None and season_num in media.seasons and originally_available_at in media.seasons[season_num].episodes)):
-          #Log("No media for season %s episode %s - skipping population of episode data", season_num, episode_num)
-          continue
+          if not ((season_num in media.seasons and episode_num in media.seasons[season_num].episodes) or 
+                  (originally_available_at is not None and date_based_season in media.seasons and originally_available_at in media.seasons[date_based_season].episodes) or 
+                  (originally_available_at is not None and season_num in media.seasons and originally_available_at in media.seasons[season_num].episodes)):
+            #Log("No media for season %s episode %s - skipping population of episode data", season_num, episode_num)
+            continue
           
         # Get the episode object from the model
         episode = metadata.seasons[season_num].episodes[episode_num]
@@ -565,7 +566,7 @@ class TVDBAgent(Agent.TV_Shows):
             except:
               date_based_season = None
             
-            if season_num in media.seasons or date_based_season in media.seasons:
+            if media is None or season_num in media.seasons or date_based_season in media.seasons:
               if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
                 try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data(), sort_order=i)
                 except: pass
