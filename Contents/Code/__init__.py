@@ -105,8 +105,7 @@ def Start():
 class TVDBAgent(Agent.TV_Shows):
   
   name = 'TheTVDB'
-  #languages = [Locale.Language.English]
-  languages = [Locale.Language.English, 'fr']
+  languages = [Locale.Language.English, 'fr', 'zh', 'sv', 'no', 'da', 'fi', 'nl', 'de', 'it', 'es', 'pl', 'hu', 'el', 'tr', 'ru', 'he', 'ja', 'pt']
 
   def search(self, results, media, lang):
     
