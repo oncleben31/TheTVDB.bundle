@@ -96,13 +96,15 @@ def Start():
   
   Dict['ZIP_MIRROR'] = 'http://' + TVDB_PROXY
   Dict['IMG_MIRROR'] = 'http://' + TVDB_PROXY
-  HTTP.CacheTime = CACHE_1DAY
+  #HTTP.CacheTime = CACHE_1DAY
+  HTTP.CacheTime = CACHE_1MINUTE
   
 class TVDBAgent(Agent.TV_Shows):
   
   name = 'TheTVDB'
-  languages = [Locale.Language.English]
-  
+  #languages = [Locale.Language.English]
+  languages = [Locale.Language.English, 'fr']
+
   def search(self, results, media, lang):
     
     # MAKE SURE WE USE precomposed form, since that seems to be what TVDB prefers.
@@ -254,6 +256,8 @@ class TVDBAgent(Agent.TV_Shows):
           #will need to get the whole tvdb language mapping in here:  
           if lang == 'en':
             tvdbLang = '7'
+          elif lang == 'fr':
+	        tvdbLang = '17'
           try:
             for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang))).xpath('//table[@id="listtable"]//tr')[1:3]:
               url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
