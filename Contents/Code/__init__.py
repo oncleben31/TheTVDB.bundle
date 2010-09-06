@@ -99,8 +99,8 @@ def Start():
   
   Dict['ZIP_MIRROR'] = 'http://' + TVDB_PROXY
   Dict['IMG_MIRROR'] = 'http://' + TVDB_PROXY
-  #HTTP.CacheTime = CACHE_1DAY
-  HTTP.CacheTime = CACHE_1MINUTE
+  HTTP.CacheTime = CACHE_1DAY
+  
   
 class TVDBAgent(Agent.TV_Shows):
   
@@ -255,11 +255,46 @@ class TVDBAgent(Agent.TV_Shows):
           year= ''
           if year:
             year = str(media.year)
-          #will need to get the whole tvdb language mapping in here:  
-          if lang == 'en':
+          #language mapping by using http://www.thetvdb.com/wiki/index.php/Multi_Language :  
+          if lang == 'zh':
+            tvdbLang = '6'
+          elif lang == 'en':
             tvdbLang = '7'
+          elif lang == 'sv':
+            tvdbLang = '8'
+          elif lang == 'no':
+            tvdbLang = '9'
+          elif lang == 'da':
+            tvdbLang = '10'
+          elif lang == 'fi':
+            tvdbLang = '11'
+          elif lang == 'nl':
+            tvdbLang = '13'
+          elif lang == 'de':
+            tvdbLang = '14'
+          elif lang == 'it':
+            tvdbLang = '15'
+          elif lang == 'es':
+            tvdbLang = '16'
           elif lang == 'fr':
-	        tvdbLang = '17'
+            tvdbLang = '17'
+          elif lang == 'pl':
+            tvdbLang = '18'
+          elif lang == 'hu':
+            tvdbLang = '19'
+          elif lang == 'el':
+            tvdbLang = '20'
+          elif lang == 'tr':
+            tvdbLang = '21'
+          elif lang == 'ru':
+            tvdbLang = '22'
+          elif lang == 'he':
+            tvdbLang = '24'
+          elif lang == 'ja':
+            tvdbLang = '25'
+          elif lang == 'pt':
+            tvdbLang = '26'
+
           try:
             for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang))).xpath('//table[@id="listtable"]//tr')[1:3]:
               url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
@@ -539,7 +574,7 @@ class TVDBAgent(Agent.TV_Shows):
           banner_lang = el_text(banner_el, 'Language')
           
           # Check that the language matches
-          if banner_lang != lang:
+          if (banner_lang != lang) and (banner_lang != 'en'):
             return
             
           # Compute the banner name and prepare the data
