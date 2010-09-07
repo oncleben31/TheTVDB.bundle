@@ -259,45 +259,8 @@ class TVDBAgent(Agent.TV_Shows):
           if year:
             year = str(media.year)
           #language mapping by using http://www.thetvdb.com/wiki/index.php/Multi_Language :  
-          if lang == 'zh':
-            tvdbLang = '6'
-          elif lang == 'en':
-            tvdbLang = '7'
-          elif lang == 'sv':
-            tvdbLang = '8'
-          elif lang == 'no':
-            tvdbLang = '9'
-          elif lang == 'da':
-            tvdbLang = '10'
-          elif lang == 'fi':
-            tvdbLang = '11'
-          elif lang == 'nl':
-            tvdbLang = '13'
-          elif lang == 'de':
-            tvdbLang = '14'
-          elif lang == 'it':
-            tvdbLang = '15'
-          elif lang == 'es':
-            tvdbLang = '16'
-          elif lang == 'fr':
-            tvdbLang = '17'
-          elif lang == 'pl':
-            tvdbLang = '18'
-          elif lang == 'hu':
-            tvdbLang = '19'
-          elif lang == 'el':
-            tvdbLang = '20'
-          elif lang == 'tr':
-            tvdbLang = '21'
-          elif lang == 'ru':
-            tvdbLang = '22'
-          elif lang == 'he':
-            tvdbLang = '24'
-          elif lang == 'ja':
-            tvdbLang = '25'
-          elif lang == 'pt':
-            tvdbLang = '26'
-
+          tvdbLang = THETVDB_LANGUAGES_CODE[lang]
+          
           try:
             for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang))).xpath('//table[@id="listtable"]//tr')[1:3]:
               url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
