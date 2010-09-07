@@ -42,9 +42,9 @@ netLock = Thread.Lock()
 successCount = 0
 failureCount = 0
 
-MIN_RETRY_TIMEOUT = 3
+MIN_RETRY_TIMEOUT = 5
 RETRY_TIMEOUT = MIN_RETRY_TIMEOUT
-TOTAL_TRIES   = 3
+TOTAL_TRIES   = 2
 BACKUP_TRIES  = -1
 
 headers = {'User-agent': 'Plex/Nine'}
