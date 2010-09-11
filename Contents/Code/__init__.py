@@ -406,6 +406,14 @@ class TVDBAgent(Agent.TV_Shows):
     except:
       pass
 
+  def fixBrokenXml(self, xml):
+    if xml.count('<?xml') > 1:
+      xml = xml[xml.rfind('<?xml'):]
+      if xml.count('</Data>') > 1:
+        xml = xml[:-7]
+        
+    return xml
+
   def update(self, metadata, media, lang):
     zip_url = TVDB_ZIP_URL % (Dict['ZIP_MIRROR'], metadata.id, lang)
     banner_root = TVDB_BANNER_URL % Dict['IMG_MIRROR']
@@ -414,10 +422,10 @@ class TVDBAgent(Agent.TV_Shows):
     zip_data = GetResultFromNetwork(zip_url)
     zip_archive = Archive.Zip(zip_data)
     
-    # Extract the XML files from the archive
-    root_el = XML.ElementFromString(zip_archive[lang+'.xml'])
-    actors_el = XML.ElementFromString(zip_archive['actors.xml'])
-    banners_el =XML.ElementFromString(zip_archive['banners.xml'])
+    # Extract the XML files from the archive. Work around corrupt XML.
+    root_el = XML.ElementFromString(self.fixBrokenXml(zip_archive[lang+'.xml']))
+    actors_el = XML.ElementFromString(self.fixBrokenXml(zip_archive['actors.xml']))
+    banners_el =XML.ElementFromString(self.fixBrokenXml(zip_archive['banners.xml']))
     
     # Close the archive
     del zip_archive
