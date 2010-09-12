@@ -531,70 +531,73 @@ class TVDBAgent(Agent.TV_Shows):
 
       # Add a download task for each image
       i = 0
-      for banner_el in banners_el.xpath('Banner'):
-        i += 1
-        @task
-        def DownloadImage(metadata=metadata, banner_el=banner_el, i=i):
+      accepted_languages = [lang, 'en']
+      for accepted_lang in accepted_languages:
+	      for banner_el in banners_el.xpath('Banner'):
+	        i += 1
+	        @task
+	        def DownloadImage(metadata=metadata, banner_el=banner_el, i=i, accepted_lang=accepted_lang):
           
-          # Get the image attributes from the XML
-          banner_type = el_text(banner_el, 'BannerType')
-          banner_path = el_text(banner_el, 'BannerPath')
-          try:
-            banner_thumb = el_text(banner_el, 'ThumbnailPath')
-            proxy = Proxy.Preview
-          except:
-            banner_thumb = banner_path
-            proxy = Proxy.Media
-          banner_lang = el_text(banner_el, 'Language')
+	          # Get the image attributes from the XML
+	          banner_type = el_text(banner_el, 'BannerType')
+	          banner_path = el_text(banner_el, 'BannerPath')
+	          try:
+	            banner_thumb = el_text(banner_el, 'ThumbnailPath')
+	            proxy = Proxy.Preview
+	          except:
+	            banner_thumb = banner_path
+	            proxy = Proxy.Media
+	          banner_lang = el_text(banner_el, 'Language')
           
-          # Check that the language matches
-          if (banner_lang != lang) and (banner_lang != 'en'):
-            return
+	          # Check that the language matches
+	          if (banner_lang != accepted_lang) :
+	            return
             
-          # Compute the banner name and prepare the data
-          banner_name = banner_root + banner_path
-          banner_url = banner_root + banner_thumb
+	          # Compute the banner name and prepare the data
+	          banner_name = banner_root + banner_path
+	          banner_url = banner_root + banner_thumb
+	          Log('Oncleben31 : lang = '+ accepted_lang + '| i =' + str(i) + '| URL= ' + banner_url)
           
-          def banner_data(path):
-            return GetResultFromNetwork(path, False)
+	          def banner_data(path):
+	            return GetResultFromNetwork(path, False)
         
-          # Find the attribute to add to based on the image type, checking that data doesn't
-          # already exist before downloading
-          if banner_type == 'fanart' and banner_name not in metadata.art:
-            try: metadata.art[banner_name] = proxy(banner_data(banner_url), sort_order=i)
-            except: pass
+	          # Find the attribute to add to based on the image type, checking that data doesn't
+	          # already exist before downloading
+	          if banner_type == 'fanart' and banner_name not in metadata.art:
+	            try: metadata.art[banner_name] = proxy(banner_data(banner_url), sort_order=i)
+	            except: pass
 
-          elif banner_type == 'poster' and banner_name not in metadata.posters:
-            try: metadata.posters[banner_name] = proxy(banner_data(banner_url), sort_order=i)
-            except: pass
+	          elif banner_type == 'poster' and banner_name not in metadata.posters:
+	            try: metadata.posters[banner_name] = proxy(banner_data(banner_url), sort_order=i)
+	            except: pass
 
-          elif banner_type == 'series':
-            if banner_name not in metadata.banners:
-              try: metadata.banners[banner_name] = proxy(banner_data(banner_url), sort_order=i)
-              except: pass
+	          elif banner_type == 'series':
+	            if banner_name not in metadata.banners:
+	              try: metadata.banners[banner_name] = proxy(banner_data(banner_url), sort_order=i)
+	              except: pass
 
-          elif banner_type == 'season':
-            banner_type_2 = el_text(banner_el, 'BannerType2')
-            season_num = el_text(banner_el, 'Season')
+	          elif banner_type == 'season':
+	            banner_type_2 = el_text(banner_el, 'BannerType2')
+	            season_num = el_text(banner_el, 'Season')
             
-            # Need to check for date-based season (year) as well.
-            try:
-              date_based_season = (int(season_num) + metadata.originally_available_at.year - 1)
-            except:
-              date_based_season = None
+	            # Need to check for date-based season (year) as well.
+	            try:
+	              date_based_season = (int(season_num) + metadata.originally_available_at.year - 1)
+	            except:
+	              date_based_season = None
             
-            if media is None or season_num in media.seasons or date_based_season in media.seasons:
-              if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
-                try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data(banner_url), sort_order=i)
-                except: pass
+	            if media is None or season_num in media.seasons or date_based_season in media.seasons:
+	              if banner_type_2 == 'season' and banner_name not in metadata.seasons[season_num].posters:
+	                try: metadata.seasons[season_num].posters[banner_name] = proxy(banner_data(banner_url), sort_order=i)
+	                except: pass
 
-              elif banner_type_2 == 'seasonwide' and banner_name not in metadata.seasons[season_num].banners:
-                try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data(banner_url), sort_order=i)
-                except: pass
+	              elif banner_type_2 == 'seasonwide' and banner_name not in metadata.seasons[season_num].banners:
+	                try: metadata.seasons[season_num].banners[banner_name] = proxy(banner_data(banner_url), sort_order=i)
+	                except: pass
             
-            else:
-              #Log('No media for season %s - skipping download of %s', season_num, banner_name)
-              pass
+	            else:
+	              #Log('No media for season %s - skipping download of %s', season_num, banner_name)
+	              pass
               
               
   def util_cleanShow(self, cleanShow, scrubList):
