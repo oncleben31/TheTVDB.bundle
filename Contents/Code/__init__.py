@@ -38,6 +38,10 @@ EXTRACT_AS_KEYWORDS = ['uk','us','bbc']
 
 netLock = Thread.Lock()
 
+# Language table
+THETVDB_LANGUAGES_CODE = {'zh': '6', 'en':'7', 'sv': '8', 'no': '9', 'da': '10', 'fi': '11', 'nl': '13', 'de': '14', 'it': '15', 'es': '16', 'fr': '17', 
+                          'pl': '18', 'hu': '19', 'el': '20', 'tr': '21', 'ru': '22', 'he': '24', 'ja': '25', 'pt': '26'}
+
 # Keep track of success/failures in a row.
 successCount = 0
 failureCount = 0
@@ -101,15 +105,28 @@ def Start():
   Dict['IMG_MIRROR'] = 'http://' + TVDB_PROXY
   HTTP.CacheTime = CACHE_1DAY
   
+  
 class TVDBAgent(Agent.TV_Shows):
   
   name = 'TheTVDB'
-  languages = [Locale.Language.English]
-  
+  languages = [Locale.Language.English, 'fr', 'zh', 'sv', 'no', 'da', 'fi', 'nl', 'de', 'it', 'es', 'pl', 'hu', 'el', 'tr', 'ru', 'he', 'ja', 'pt']
+
+  def getGoogleResult(self, url):
+    res = JSON.ObjectFromURL(url)
+    if res['responseStatus'] != 200:
+      res = JSON.ObjectFromURL(url, cacheTime=0)
+    time.sleep(0.5)
+    return res
+
   def search(self, results, media, lang):
     
     # MAKE SURE WE USE precomposed form, since that seems to be what TVDB prefers.
     media.show = unicodedata.normalize('NFC', unicode(media.show))
+    
+    # If we got passed in something that looks like an ID, use it.
+    if re.match('[0-9]+', media.show) is not None:
+      url = TVDB_PROXY + '?tab=series&id=' + media.show
+      self.TVDBurlParse(media, lang, results, 100, 0, url)
     
     mediaYear = ''
     if media.year is not None:
@@ -165,7 +182,7 @@ class TVDBAgent(Agent.TV_Shows):
                 jsonObj = jsonObj['Results']
                 hasResults = True
             elif s.count('googleapis.com') > 0:
-              jsonObj = JSON.ObjectFromURL(s % (tmpMediaShowYear, keywords))['responseData']['results']
+              jsonObj = self.getGoogleResult(s % (tmpMediaShowYear, keywords))['responseData']['results']
               if len(jsonObj) > 0:
                 hasResults = True
   
@@ -254,9 +271,9 @@ class TVDBAgent(Agent.TV_Shows):
           year= ''
           if year:
             year = str(media.year)
-          #will need to get the whole tvdb language mapping in here:  
-          if lang == 'en':
-            tvdbLang = '7'
+          #language mapping by using http://www.thetvdb.com/wiki/index.php/Multi_Language :  
+          tvdbLang = THETVDB_LANGUAGES_CODE[lang]
+          
           try:
             for el in  HTML.ElementFromString(GetResultFromNetwork(TVDB_ADVSEARCH_NETWORK % (String.Quote(searchForTitle), year, String.Quote(network), tvdbLang))).xpath('//table[@id="listtable"]//tr')[1:3]:
               url = el.xpath('.//a')[0].get('href').replace('&amp;','&')
@@ -531,20 +548,12 @@ class TVDBAgent(Agent.TV_Shows):
         i += 1
         @task
         def DownloadImage(metadata=metadata, banner_el=banner_el, i=i):
-          
-          # Get the image attributes from the XML
-          banner_type = el_text(banner_el, 'BannerType')
-          banner_path = el_text(banner_el, 'BannerPath')
-          try:
-            banner_thumb = el_text(banner_el, 'ThumbnailPath')
-            proxy = Proxy.Preview
-          except:
-            banner_thumb = banner_path
-            proxy = Proxy.Media
-          banner_lang = el_text(banner_el, 'Language')
+
+          # Parse the banner.
+          banner_type, banner_path, banner_lang, banner_thumb, proxy = self.parse_banner(banner_el)
           
           # Check that the language matches
-          if banner_lang != lang:
+          if (banner_lang != lang) and (banner_lang != 'en'):
             return
             
           # Compute the banner name and prepare the data
@@ -592,7 +601,35 @@ class TVDBAgent(Agent.TV_Shows):
               #Log('No media for season %s - skipping download of %s', season_num, banner_name)
               pass
               
+    # Fallback to foreign art if localized art doesn't exist.
+    if len(metadata.art) == 0 and lang == 'en':
+      i = 0
+      for banner_el in banners_el.xpath('Banner'):
+        banner_type, banner_path, banner_lang, banner_thumb, proxy = self.parse_banner(banner_el)
+        banner_name = banner_root + banner_path
+        if banner_type == 'fanart' and banner_name not in metadata.art:
+          try: metadata.art[banner_name] = proxy(self.banner_data(banner_root + banner_thumb), sort_order=i)
+          except: pass
               
+  def parse_banner(self, banner_el):
+    el_text = lambda element, xp: element.xpath(xp)[0].text if element.xpath(xp)[0].text else '' 
+
+    # Get the image attributes from the XML
+    banner_type = el_text(banner_el, 'BannerType')
+    banner_path = el_text(banner_el, 'BannerPath')
+    try:
+      banner_thumb = el_text(banner_el, 'ThumbnailPath')
+      proxy = Proxy.Preview
+    except:
+      banner_thumb = banner_path
+      proxy = Proxy.Media
+    banner_lang = el_text(banner_el, 'Language')
+
+    return (banner_type, banner_path, banner_lang, banner_thumb, proxy)
+  
+  def banner_data(self, path):
+      return GetResultFromNetwork(path, False)
+  
   def util_cleanShow(self, cleanShow, scrubList):
     for word in scrubList:
       c = word.lower()
