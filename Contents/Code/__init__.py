@@ -231,9 +231,12 @@ class TVDBAgent(Agent.TV_Shows):
     try:
       el = XML.ElementFromString(GetResultFromNetwork(TVDB_SEARCH_URL % (mediaShowYear, lang))).xpath('.//Series')[0]
       series_name = el.xpath('SeriesName')[0].text
-      if series_name.lower() == media.show.lower():
+      if series_name.lower().strip() == media.show.lower().strip():
         id = el.xpath('id')[0].text
         self.ParseSeries(media, el, lang, results, 99)
+      if series_name[:series_name.rfind('(')].lower().strip() == media.show.lower().strip():
+        id = el.xpath('id')[0].text
+        self.ParseSeries(media, el, lang, results, 96)
     except:
       pass
     
